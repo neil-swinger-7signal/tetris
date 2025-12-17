@@ -78,21 +78,21 @@ The workflow uses `npm ci` which requires a lock file for reproducible builds.
 #### Music or Assets Not Loading (404 on GitHub Pages)
 **Problem**: Music file or other assets return 404 when deployed to GitHub Pages
 
-**Solution**: This is fixed in the current version. The code uses `document.baseURI` to resolve paths correctly with the base path.
+**Solution**: Use Vite's `import.meta.env.BASE_URL` to resolve paths correctly with the base path.
+
+**How it works:**
+```javascript
+// Automatically works with base path from vite.config.js
+const musicPath = import.meta.env.BASE_URL + 'tetris-music.mp3';
+// Local: /tetris-music.mp3
+// Deployed: /tetris/tetris-music.mp3
+```
 
 If you encounter this:
 1. Verify the asset is in the `public/` folder
 2. Check the browser console for the attempted path
 3. Ensure `vite.config.js` has the correct `base` setting
-4. The app should automatically resolve paths relative to the base URL
-
-**How it works:**
-```javascript
-// Automatically works with base path
-const musicPath = new URL('/tetris-music.mp3', document.baseURI).href;
-// Local: http://localhost:5173/tetris-music.mp3
-// Deployed: https://username.github.io/tetris/tetris-music.mp3
-```
+4. Use `import.meta.env.BASE_URL` prefix for all public assets
 
 #### Pages Not Enabled
 **Problem**: No Pages settings or "GitHub Pages is currently disabled"

@@ -188,8 +188,8 @@ export default function TetrisGame() {
   // Initialize music
   useEffect(() => {
     if (!musicRef.current) {
-      // Use relative path to work with base path configuration
-      const musicPath = new URL('/tetris-music.mp3', document.baseURI).href;
+      // Use Vite's BASE_URL to correctly resolve path with base configuration
+      const musicPath = import.meta.env.BASE_URL + 'tetris-music.mp3';
       console.log('Initializing music from:', musicPath);
       musicRef.current = new Howl({
         src: [musicPath],
