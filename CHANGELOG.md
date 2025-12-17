@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved MUSIC_SETUP.md from public/ to root directory for better documentation organization
 - Added base path configuration to vite.config.js for GitHub Pages deployment
 
+### Fixed
+- Removed package-lock.json from .gitignore to enable proper CI/CD deployment
+- Package lock file is now tracked for reproducible builds in GitHub Actions
+
 ## [1.0.0] - 2025-12-17
 
 ### Added

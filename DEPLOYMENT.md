@@ -57,9 +57,23 @@ export default defineConfig({
 1. Click on the failed workflow
 2. Check the error message
 3. Common fixes:
-   - Ensure `package-lock.json` is committed
+   - Ensure `package-lock.json` is committed (NOT in .gitignore)
    - Verify all dependencies are in `package.json`
    - Check Node version compatibility (workflow uses Node 20.x)
+
+#### Missing Lock File Error
+**Problem**: "Dependencies lock file is not found" error in workflow
+
+**Solution**:
+```bash
+# Ensure package-lock.json is NOT in .gitignore
+# Then commit it:
+git add package-lock.json
+git commit -m "Add package-lock.json for CI/CD"
+git push origin main
+```
+
+The workflow uses `npm ci` which requires a lock file for reproducible builds.
 
 #### Pages Not Enabled
 **Problem**: No Pages settings or "GitHub Pages is currently disabled"
