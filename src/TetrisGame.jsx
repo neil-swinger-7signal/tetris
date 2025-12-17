@@ -100,7 +100,7 @@ const LEVEL_SPEEDS = [
 // ============================================================================
 
 // Create empty board
-const createEmptyBoard = () => 
+const createEmptyBoard = () =>
   Array(TOTAL_ROWS).fill(null).map(() => Array(COLS).fill(0));
 
 // Generate 7-bag randomizer
@@ -132,11 +132,11 @@ const checkCollision = (board, piece, position) => {
       if (piece[row][col]) {
         const newRow = position.row + row;
         const newCol = position.col + col;
-        
+
         if (newCol < 0 || newCol >= COLS || newRow >= TOTAL_ROWS) {
           return true;
         }
-        
+
         if (newRow >= 0 && board[newRow][newCol]) {
           return true;
         }
@@ -188,15 +188,17 @@ export default function TetrisGame() {
   // Initialize music
   useEffect(() => {
     if (!musicRef.current) {
-      console.log('Initializing music from /tetris-music.mp3');
+      // Use relative path to work with base path configuration
+      const musicPath = new URL('/tetris-music.mp3', document.baseURI).href;
+      console.log('Initializing music from:', musicPath);
       musicRef.current = new Howl({
-        src: ['/tetris-music.mp3'],
+        src: [musicPath],
         loop: true,
         volume: 0.3,
         html5: true, // Force HTML5 Audio for better compatibility
         onloaderror: (id, error) => {
           console.error('Music file failed to load:', error);
-          console.error('Attempted path: /tetris-music.mp3');
+          console.error('Attempted path:', musicPath);
           console.error('Make sure tetris-music.mp3 is in the public folder');
         },
         onload: () => {
@@ -244,18 +246,18 @@ export default function TetrisGame() {
   // Spawn new piece
   const spawnNewPiece = useCallback((pieceType) => {
     if (!pieceType) return;
-    
+
     const piece = TETROMINOES[pieceType];
     const startRow = pieceType === 'I' ? BUFFER_ROWS - 2 : BUFFER_ROWS - 1;
     const startCol = pieceType === 'O' ? 4 : 3;
-    
+
     setCurrentPiece({ type: pieceType, shape: piece.shape, color: piece.color });
     setPosition({ row: startRow, col: startCol });
     setRotation(0);
     setCanHold(true);
     lockdownTimer.current = 0;
     lockdownMoves.current = 0;
-    
+
     // Check if game over
     if (checkCollision(board, piece.shape, { row: startRow, col: startCol })) {
       setGameOver(true);
@@ -266,12 +268,12 @@ export default function TetrisGame() {
   const getNextPiece = useCallback(() => {
     const next = [...nextPieces];
     const newPiece = next.shift();
-    
+
     next.push(bag.current.shift());
     if (bag.current.length < 7) {
       bag.current.push(...generateBag());
     }
-    
+
     setNextPieces(next);
     return newPiece;
   }, [nextPieces]);
@@ -279,9 +281,9 @@ export default function TetrisGame() {
   // Lock piece to board
   const lockPiece = useCallback(() => {
     if (!currentPiece) return;
-    
+
     const newBoard = board.map(row => [...row]);
-    
+
     for (let row = 0; row < currentPiece.shape.length; row++) {
       for (let col = 0; col < currentPiece.shape[row].length; col++) {
         if (currentPiece.shape[row][col]) {
@@ -293,7 +295,7 @@ export default function TetrisGame() {
         }
       }
     }
-    
+
     setBoard(newBoard);
 
     // Check for completed lines
@@ -303,7 +305,7 @@ export default function TetrisGame() {
         completedLines.push(row);
       }
     }
-    
+
     if (completedLines.length > 0) {
       // Remove completed lines
       completedLines.forEach(lineRow => {
@@ -313,7 +315,7 @@ export default function TetrisGame() {
       setBoard(newBoard);
 
       // Update score
-      const lineScores = [0, SCORE_VALUES.SINGLE, SCORE_VALUES.DOUBLE, 
+      const lineScores = [0, SCORE_VALUES.SINGLE, SCORE_VALUES.DOUBLE,
                          SCORE_VALUES.TRIPLE, SCORE_VALUES.TETRIS];
       const points = lineScores[completedLines.length] * level;
       setScore(prev => prev + points);
@@ -323,7 +325,7 @@ export default function TetrisGame() {
         return newLines;
       });
     }
-    
+
     // Spawn next piece
     spawnNewPiece(getNextPiece());
   }, [board, currentPiece, position, level, spawnNewPiece, getNextPiece]);
@@ -331,15 +333,15 @@ export default function TetrisGame() {
   // Move piece
   const movePiece = useCallback((rowDelta, colDelta) => {
     if (!currentPiece || gameOver || paused) return false;
-    
+
     const newPosition = {
       row: position.row + rowDelta,
       col: position.col + colDelta
     };
-    
+
     if (!checkCollision(board, currentPiece.shape, newPosition)) {
       setPosition(newPosition);
-      
+
       // Handle lockdown logic for horizontal moves
       if (rowDelta === 0) {
         // Check if piece is on the ground (can't move down)
@@ -347,10 +349,10 @@ export default function TetrisGame() {
           row: newPosition.row + 1,
           col: newPosition.col
         });
-        
+
         if (isOnGround) {
           lockdownMoves.current++;
-          
+
           // Reset timer based on lockdown mode
           switch (lockdownMode) {
             case 'classic':
@@ -367,68 +369,68 @@ export default function TetrisGame() {
           }
         }
       }
-      
+
       return true;
     }
-    
+
     return false;
   }, [currentPiece, position, board, gameOver, paused, lockdownMode]);
 
   // Rotate piece with SRS wall kicks
   const rotatePiece = useCallback((clockwise = true) => {
     if (!currentPiece || gameOver || paused) return;
-    
-    const newRotation = clockwise 
-      ? (rotation + 1) % 4 
+
+    const newRotation = clockwise
+      ? (rotation + 1) % 4
       : (rotation + 3) % 4;
-    
+
     let rotatedShape = currentPiece.shape;
-    const rotations = clockwise 
-      ? ((newRotation - rotation + 4) % 4) 
+    const rotations = clockwise
+      ? ((newRotation - rotation + 4) % 4)
       : ((rotation - newRotation + 4) % 4);
-    
+
     for (let i = 0; i < rotations; i++) {
       rotatedShape = rotateMatrix(rotatedShape);
     }
-    
+
     // Try wall kicks
     const kickTable = currentPiece.type === 'I' ? WALL_KICKS.I : WALL_KICKS.JLSTZ;
     const kickKey = currentPiece.type === 'O' ? null : `${rotation}->${newRotation}`;
-    
+
     if (currentPiece.type === 'O') {
       // O piece doesn't rotate
       return;
     }
-    
+
     const kicks = kickTable[kickKey] || [[0, 0]];
-    
+
     for (const [kickX, kickY] of kicks) {
       const newPosition = {
         row: position.row - kickY,
         col: position.col + kickX
       };
-      
+
       if (!checkCollision(board, rotatedShape, newPosition)) {
         setCurrentPiece({ ...currentPiece, shape: rotatedShape });
         setPosition(newPosition);
         setRotation(newRotation);
-        
+
         // Reset lockdown timer only if piece is on ground
         if (lockdownMode !== 'classic') {
           const isOnGround = checkCollision(board, rotatedShape, {
             row: newPosition.row + 1,
             col: newPosition.col
           });
-          
+
           if (isOnGround) {
             lockdownMoves.current++;
-            if (lockdownMode === 'infinite' || 
+            if (lockdownMode === 'infinite' ||
                (lockdownMode === 'extended' && lockdownMoves.current < 15)) {
               lockdownTimer.current = 0;
             }
           }
         }
-        
+
         return;
       }
     }
@@ -492,9 +494,9 @@ export default function TetrisGame() {
   // Hold piece
   const holdCurrentPiece = useCallback(() => {
     if (!currentPiece || !canHold || gameOver || paused) return;
-    
+
     const pieceType = currentPiece.type;
-    
+
     if (holdPiece === null) {
       setHoldPiece(pieceType);
       spawnNewPiece(getNextPiece());
@@ -502,7 +504,7 @@ export default function TetrisGame() {
       setHoldPiece(pieceType);
       spawnNewPiece(holdPiece);
     }
-    
+
     setCanHold(false);
   }, [currentPiece, holdPiece, canHold, gameOver, paused, spawnNewPiece, getNextPiece]);
 
@@ -656,7 +658,7 @@ export default function TetrisGame() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (gameOver || showHelp) return;
-      
+
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault();
@@ -706,7 +708,7 @@ export default function TetrisGame() {
           break;
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [movePiece, rotatePiece, hardDrop, holdCurrentPiece, applyHint, gameOver, showHelp]);
@@ -714,7 +716,7 @@ export default function TetrisGame() {
   // Game loop
   useEffect(() => {
     if (gameOver || paused || !currentPiece) return;
-    
+
     const speed = LEVEL_SPEEDS[Math.min(level - 1, LEVEL_SPEEDS.length - 1)];
 
     const gameLoop = () => {
@@ -764,9 +766,9 @@ export default function TetrisGame() {
 
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
-    
+
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-    
+
     return () => {
       if (gameLoopRef.current) {
         cancelAnimationFrame(gameLoopRef.current);
@@ -777,7 +779,7 @@ export default function TetrisGame() {
   // Render board with current piece
   const renderBoard = () => {
     const displayBoard = board.map(row => [...row]);
-    
+
     // Add ghost piece
     if (currentPiece && !paused) {
       const ghostRow = getGhostPosition(board, currentPiece.shape, position);
@@ -793,7 +795,7 @@ export default function TetrisGame() {
         }
       }
     }
-    
+
     // Add current piece
     if (currentPiece && !paused) {
       for (let row = 0; row < currentPiece.shape.length; row++) {
@@ -808,7 +810,7 @@ export default function TetrisGame() {
         }
       }
     }
-    
+
     // Only show visible rows
     return displayBoard.slice(BUFFER_ROWS);
   };
@@ -842,14 +844,14 @@ export default function TetrisGame() {
           padding: 0;
           box-sizing: border-box;
         }
-        
+
         body {
           font-family: 'Courier New', monospace;
           background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 100%);
           color: #fff;
           overflow: hidden;
         }
-        
+
         .tetris-container {
           display: flex;
           flex-direction: column;
@@ -857,12 +859,12 @@ export default function TetrisGame() {
           justify-content: center;
           min-height: 100vh;
           padding: 20px;
-          background: 
+          background:
             radial-gradient(circle at 20% 50%, rgba(138, 43, 226, 0.1) 0%, transparent 50%),
             radial-gradient(circle at 80% 50%, rgba(0, 191, 255, 0.1) 0%, transparent 50%),
             linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 100%);
         }
-        
+
         .game-header {
           text-align: center;
           margin-bottom: 30px;
@@ -873,7 +875,7 @@ export default function TetrisGame() {
           0%, 100% { text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff, 0 0 60px #ff00ff; }
           50% { text-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff, 0 0 90px #00ffff; }
         }
-        
+
         .tetris-logo {
           font-size: 3.5rem;
           font-weight: bold;
@@ -885,7 +887,7 @@ export default function TetrisGame() {
           text-transform: uppercase;
           margin-bottom: 10px;
         }
-        
+
         .help-button {
           background: rgba(255, 255, 255, 0.1);
           border: 2px solid #00ffff;
@@ -897,24 +899,24 @@ export default function TetrisGame() {
           margin-top: 10px;
           transition: all 0.3s;
         }
-        
+
         .help-button:hover {
           background: rgba(0, 255, 255, 0.2);
           box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
         }
-        
+
         .game-content {
           display: flex;
           gap: 30px;
           align-items: flex-start;
         }
-        
+
         .side-panel {
           display: flex;
           flex-direction: column;
           gap: 20px;
         }
-        
+
         .panel {
           background: rgba(10, 10, 30, 0.8);
           border: 2px solid #ff00ff;
@@ -923,7 +925,7 @@ export default function TetrisGame() {
           min-width: 150px;
           box-shadow: 0 0 30px rgba(255, 0, 255, 0.3);
         }
-        
+
         .panel h3 {
           color: #00ffff;
           font-size: 1rem;
@@ -933,7 +935,7 @@ export default function TetrisGame() {
           position: relative;
           cursor: help;
         }
-        
+
         .panel h3 .tooltip {
           visibility: hidden;
           opacity: 0;
@@ -951,7 +953,7 @@ export default function TetrisGame() {
           border: 1px solid #444;
           transition: opacity 0.3s, visibility 0.3s;
         }
-        
+
         .panel h3 .tooltip::after {
           content: '';
           position: absolute;
@@ -961,24 +963,24 @@ export default function TetrisGame() {
           border: 5px solid transparent;
           border-top-color: rgba(0, 0, 0, 0.9);
         }
-        
+
         .panel h3:hover .tooltip {
           visibility: visible;
           opacity: 1;
         }
-        
+
         .score-value {
           font-size: 1.5rem;
           color: #ff00ff;
           font-weight: bold;
         }
-        
+
         .next-pieces {
           display: flex;
           flex-direction: column;
           gap: 10px;
         }
-        
+
         .mini-piece {
           display: flex;
           flex-direction: column;
@@ -987,23 +989,23 @@ export default function TetrisGame() {
           background: rgba(0, 0, 0, 0.3);
           border-radius: 5px;
         }
-        
+
         .mini-row {
           display: flex;
           gap: 2px;
         }
-        
+
         .mini-cell {
           width: 12px;
           height: 12px;
           border-radius: 2px;
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .board-container {
           position: relative;
         }
-        
+
         .board {
           display: grid;
           grid-template-columns: repeat(${COLS}, 30px);
@@ -1012,11 +1014,11 @@ export default function TetrisGame() {
           padding: 2px;
           border: 3px solid #00ffff;
           border-radius: 5px;
-          box-shadow: 
+          box-shadow:
             0 0 40px rgba(0, 255, 255, 0.5),
             inset 0 0 20px rgba(0, 0, 0, 0.5);
         }
-        
+
         .cell {
           width: 30px;
           height: 30px;
@@ -1024,14 +1026,14 @@ export default function TetrisGame() {
           position: relative;
           transition: all 0.1s;
         }
-        
+
         .cell.filled {
           border: 2px solid rgba(255, 255, 255, 0.3);
-          box-shadow: 
+          box-shadow:
             inset 0 0 10px rgba(255, 255, 255, 0.3),
             0 0 10px currentColor;
         }
-        
+
         .cell.filled::after {
           content: '';
           position: absolute;
@@ -1039,19 +1041,19 @@ export default function TetrisGame() {
           left: 2px;
           right: 2px;
           bottom: 2px;
-          background: linear-gradient(135deg, 
-            rgba(255,255,255,0.3) 0%, 
-            transparent 50%, 
+          background: linear-gradient(135deg,
+            rgba(255,255,255,0.3) 0%,
+            transparent 50%,
             rgba(0,0,0,0.3) 100%);
           pointer-events: none;
         }
-        
+
         .cell.ghost {
           background: transparent !important;
           border: 2px dashed rgba(255, 255, 255, 0.3);
           box-shadow: none;
         }
-        
+
         .overlay {
           position: absolute;
           top: 0;
@@ -1065,19 +1067,19 @@ export default function TetrisGame() {
           border-radius: 5px;
           z-index: 10;
         }
-        
+
         .overlay-content {
           text-align: center;
           padding: 30px;
         }
-        
+
         .overlay-content h2 {
           font-size: 2.5rem;
           margin-bottom: 20px;
           color: #ff00ff;
           text-shadow: 0 0 20px #ff00ff;
         }
-        
+
         .overlay-content button {
           background: linear-gradient(45deg, #ff00ff, #00ffff);
           border: none;
@@ -1092,33 +1094,33 @@ export default function TetrisGame() {
           text-transform: uppercase;
           letter-spacing: 2px;
         }
-        
+
         .overlay-content button:hover {
           transform: scale(1.05);
           box-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
         }
-        
+
         .controls-panel {
           max-width: 300px;
           line-height: 1.8;
         }
-        
+
         .controls-panel p {
           color: #ccc;
           font-size: 0.9rem;
           margin: 5px 0;
         }
-        
+
         .controls-panel strong {
           color: #00ffff;
         }
-        
+
         .button-group {
           display: flex;
           gap: 10px;
           margin-top: 10px;
         }
-        
+
         .mode-button {
           background: rgba(255, 255, 255, 0.1);
           border: 2px solid rgba(255, 255, 255, 0.3);
@@ -1130,23 +1132,23 @@ export default function TetrisGame() {
           transition: all 0.3s;
           position: relative;
         }
-        
+
         .mode-button:hover {
           border-color: rgba(255, 255, 255, 0.5);
           color: #fff;
         }
-        
+
         .mode-button.active {
           background: ${lockdownMode === 'infinite' ? 'rgba(0, 255, 0, 0.3)' : lockdownMode === 'extended' ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255, 0, 0, 0.3)'};
           border-color: ${lockdownMode === 'infinite' ? '#00ff00' : lockdownMode === 'extended' ? '#ffff00' : '#ff0000'};
           color: #fff;
           box-shadow: 0 0 20px ${lockdownMode === 'infinite' ? '#00ff00' : lockdownMode === 'extended' ? '#ffff00' : '#ff0000'};
         }
-        
+
         .mode-button {
           position: relative;
         }
-        
+
         .mode-button .tooltip {
           visibility: hidden;
           opacity: 0;
@@ -1164,7 +1166,7 @@ export default function TetrisGame() {
           border: 1px solid #444;
           transition: opacity 0.3s, visibility 0.3s;
         }
-        
+
         .mode-button .tooltip::after {
           content: '';
           position: absolute;
@@ -1174,23 +1176,23 @@ export default function TetrisGame() {
           border: 5px solid transparent;
           border-top-color: rgba(0, 0, 0, 0.9);
         }
-        
+
         .mode-button:hover .tooltip {
           visibility: visible;
           opacity: 1;
         }
-        
+
         .lockdown-timer {
           margin-top: 10px;
           font-size: 0.8rem;
         }
-        
+
         .timer-label {
           color: #ff6666;
           margin-bottom: 5px;
           text-align: center;
         }
-        
+
         .timer-bar {
           width: 100%;
           height: 8px;
@@ -1199,43 +1201,43 @@ export default function TetrisGame() {
           overflow: hidden;
           border: 1px solid #ff6666;
         }
-        
+
         .timer-fill {
           height: 100%;
           background: linear-gradient(90deg, #ff0000, #ff6666, #ffff00);
           transition: width 0.1s linear;
           border-radius: 3px;
         }
-        
+
         .timer-text {
           text-align: center;
           margin-top: 3px;
           color: #ffff00;
           font-size: 0.7rem;
         }
-        
+
         @media (max-width: 768px) {
           .game-content {
             flex-direction: column;
             align-items: center;
           }
-          
+
           .tetris-logo {
             font-size: 2rem;
             letter-spacing: 4px;
           }
-          
+
           .board {
             grid-template-columns: repeat(${COLS}, 25px);
           }
-          
+
           .cell {
             width: 25px;
             height: 25px;
           }
         }
       `}</style>
-      
+
       <div className="game-header">
         <h1 className="tetris-logo">TETRIS</h1>
         <div style={{display: 'flex', gap: '10px', justifyContent: 'center'}}>
@@ -1250,7 +1252,7 @@ export default function TetrisGame() {
           </button>
         </div>
       </div>
-      
+
       <div className="game-content">
         <div className="side-panel">
           <div className="panel">
@@ -1259,40 +1261,40 @@ export default function TetrisGame() {
             </h3>
             {holdPiece && renderMiniPiece(holdPiece)}
           </div>
-          
+
           <div className="panel">
             <h3>Score</h3>
             <div className="score-value">{score.toLocaleString()}</div>
           </div>
-          
+
           <div className="panel">
             <h3>Lines</h3>
             <div className="score-value">{lines}</div>
           </div>
-          
+
           <div className="panel">
             <h3>Level</h3>
             <div className="score-value">{level}</div>
           </div>
-          
+
           <div className="panel">
             <h3>Lockdown</h3>
             <div className="button-group">
-              <button 
+              <button
                 className={`mode-button ${lockdownMode === 'infinite' ? 'active' : ''}`}
                 onClick={() => setLockdownMode('infinite')}
               >
                 ∞
                 <span className="tooltip">Unlimited moves while on ground</span>
               </button>
-              <button 
+              <button
                 className={`mode-button ${lockdownMode === 'extended' ? 'active' : ''}`}
                 onClick={() => setLockdownMode('extended')}
               >
                 EXT
                 <span className="tooltip">Up to 15 moves before locking</span>
               </button>
-              <button 
+              <button
                 className={`mode-button ${lockdownMode === 'classic' ? 'active' : ''}`}
                 onClick={() => setLockdownMode('classic')}
               >
@@ -1304,7 +1306,7 @@ export default function TetrisGame() {
               <div className="lockdown-timer">
                 <div className="timer-label">Lock in:</div>
                 <div className="timer-bar">
-                  <div 
+                  <div
                     className="timer-fill"
                     style={{
                       width: `${Math.max(0, 100 - (lockdownTimer.current / (
@@ -1322,10 +1324,10 @@ export default function TetrisGame() {
             )}
           </div>
         </div>
-        
+
         <div className="board-container">
           <div className="board">
-            {renderBoard().map((row, i) => 
+            {renderBoard().map((row, i) =>
               row.map((cell, j) => (
                 <div
                   key={`${i}-${j}`}
@@ -1337,7 +1339,7 @@ export default function TetrisGame() {
               ))
             )}
           </div>
-          
+
           {(paused || gameOver) && (
             <div className="overlay">
               <div className="overlay-content">
@@ -1363,7 +1365,7 @@ export default function TetrisGame() {
             </div>
           )}
         </div>
-        
+
         <div className="side-panel">
           <div className="panel">
             <h3>Next</h3>
@@ -1375,7 +1377,7 @@ export default function TetrisGame() {
           </div>
         </div>
       </div>
-      
+
       {showHelp && (
         <div className="overlay" style={{position: 'fixed', zIndex: 1000}}>
           <div className="overlay-content controls-panel">

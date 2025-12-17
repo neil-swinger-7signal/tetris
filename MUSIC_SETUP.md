@@ -16,8 +16,10 @@ The game is configured to play background music using Howler.js. To enable music
 If you want to use a different filename or format, edit `src/TetrisGame.jsx`:
 
 ```javascript
+// The game uses document.baseURI to work with GitHub Pages base paths
+const musicPath = new URL('/your-music-filename.mp3', document.baseURI).href;
 musicRef.current = new Howl({
-  src: ['/your-music-filename.mp3'], // Change this line
+  src: [musicPath], // Uses resolved path
   loop: true,
   volume: 0.3,
   onloaderror: () => {
@@ -25,6 +27,8 @@ musicRef.current = new Howl({
   }
 });
 ```
+
+**Note**: The music path automatically adjusts for deployment. It works both locally and on GitHub Pages without changes.
 
 ### Recommended Free Music Sources
 

@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Removed package-lock.json from .gitignore to enable proper CI/CD deployment
 - Package lock file is now tracked for reproducible builds in GitHub Actions
+- Fixed music file path to work with GitHub Pages base path configuration
+- Music now loads correctly when deployed to subdirectory (e.g., /tetris/)
 
 ## [1.0.0] - 2025-12-17
 
